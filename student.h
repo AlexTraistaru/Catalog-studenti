@@ -1,18 +1,18 @@
 #include <iostream>
-#include <math.h>
 #include <string>
+#include <math.h>
 
-using namespace std;    
-
-struct Student{
-    string nume;
+struct Student {
+    std::string nume;
     int varsta;
-    int nr_note;
-    double note[20]; 
+    int m;
+    double notele[20];
     double medie;
 
-public:
     Student();
-    void citire_student(const string& n, int v, int nr_n, const double* notele);
-    void media_studentului();
+    void citire_student(const std::string& n, int v, int nr, const double note[]);
+    void calculeaza_medie();
 };
+//const - garanteaza ca nu se va modifica obiectul curent
+    //& - se transmite prin referinta (nu se face copie), se duce in memorie exact unde este numele (din fisier)
+    //* - pointer la un array de double (notele), puteam sa mai scriu double notele[]
