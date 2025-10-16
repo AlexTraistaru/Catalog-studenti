@@ -43,7 +43,7 @@ void Catalog::citire(const std::string& fis_intrare) {
 
 void Catalog::sorteaza() {
     int i, j;
-    double eroare = 1e-5; 
+    double eroare = 1e-7; 
     for (i = 0; i < N - 1; i++) 
     {
         for (j = i + 1; j < N; j++) 
@@ -73,84 +73,73 @@ void Catalog::sorteaza() {
     }
 }
 
-void Catalog::scriere(const std::string& fis_iesire) const{
+void Catalog::scriere(const std::string& fis_iesire) const {
     std::ofstream out(fis_iesire.c_str());
     if (!out.is_open()) {
         std::cout << "Eroare la deschiderea fisierului de iesire\n";
         return;
     }
 
-    const int WN = 20; // latime Nume
-    const int WV = 6;  // latime Varsta
-    const int WM = 5;  // latime Medie
+    int latime_nume = 20; 
+    int latime_varsta = 6;
+    int latime_medie = 5;
 
-    // functie locala pentru separator
-    auto linie = [&](void) {
-        out << '+';
-        for (int i = 0; i < WN + 2; i++) out << '-';
-        out << '+';
-        for (int i = 0; i < WV + 2; i++) out << '-';
-        out << '+';
-        for (int i = 0; i < WM + 2; i++) out << '-';
-        out << "+\n";
-    };
+    out << "+----------------------+--------+-------+\n";
 
-    // --- antet ---
-    linie();
     out << "| Nume";
-    for (int i = 4; i < WN; i++) out << ' ';
+    for (int i = 4; i < latime_nume; i++)
+        out << ' ';
     out << " | Varsta";
-    for (int i = 6; i < WV; i++) out << ' ';
+    for (int i = 6; i < latime_varsta; i++) 
+        out << ' ';
     out << " | Medie";
-    for (int i = 5; i < WM; i++) out << ' ';
+    for (int i = 5; i < latime_medie; i++) 
+        out << ' ';
     out << " |\n";
-    linie();
 
-    // --- randurile studentilor ---
+    out << "+----------------------+--------+-------+\n";
+
     int lim = (K < N ? K : N);
     for (int i = 0; i < lim; i++) {
         const Student& s = vector_studenti[i];
 
-        // | Nume
+        // coloana NUME
         out << "| ";
         std::string nume = s.nume;
-        if ((int)nume.size() > WN) nume = nume.substr(0, WN);
+        if ((int)nume.size() > latime_nume) nume = nume.substr(0, latime_nume);
         out << nume;
-        for (int sp = (int)nume.size(); sp < WN; sp++) out << ' ';
+        for (int sp = (int)nume.size(); sp < latime_nume; sp++) out << ' ';
         out << " | ";
 
-        // Varsta
-        int varsta = s.varsta;
-        char varsta_str[10];
-        int len = 0, x = varsta;
-        if (x == 0) varsta_str[len++] = '0';
-        else {
-            char rev[10]; int r = 0;
-            while (x > 0) { rev[r++] = '0' + (x % 10); x /= 10; }
-            for (int j = r - 1; j >= 0; j--) varsta_str[len++] = rev[j];
-        }
-        varsta_str[len] = '\0';
-        out << varsta_str;
-        for (int sp = len; sp < WV; sp++) out << ' ';
+        // coloana VARSTA
+        out << s.varsta;
+        int v = s.varsta, cifre = 0;
+        if (v == 0) cifre = 1;
+        else while (v > 0) { v /= 10; cifre++; }
+        for (int sp = cifre; sp < latime_varsta; sp++) out << ' ';
         out << " | ";
 
-        // Medie (2 zecimale)
-        double medie = s.medie;
-        long long c = (long long)floor(medie * 100.0 + 0.5);
-        int intp = (int)(c / 100);
-        int dec = (int)(c % 100);
-        char medie_str[10];
-        if (dec < 10)
-            sprintf(medie_str, "%d.0%d", intp, dec);
+        // coloana MEDIE (exact 2 zecimale, padding fix)
+        double m = s.medie;
+        long long c = (long long)floor(m * 100.0 + 0.5);
+        int parte_int = (int)(c / 100);
+        int parte_dec = (int)(c % 100);
+
+        char medie_str[8];
+        if (parte_int < 10)
+            sprintf(medie_str, " %.2f", m); // spatiu initial pt aliniere
         else
-            sprintf(medie_str, "%d.%d", intp, dec);
+            sprintf(medie_str, "%.2f", m);
 
-        out << medie_str;
-        int lenm = 0; while (medie_str[lenm] != '\0') lenm++;
-        for (int sp = lenm; sp < WM; sp++) out << ' ';
+        // luam doar primele 5 caractere din rezultat (ex: " 9.50" / "10.00")
+        for (int j = 0; j < 5 && medie_str[j] != '\0'; j++)
+            out << medie_str[j];
+
         out << " |\n";
     }
 
-    linie();
+    // linia de jos
+    out << "+----------------------+--------+-------+\n";
+
     out.close();
 }
