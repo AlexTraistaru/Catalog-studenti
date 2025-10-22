@@ -19,11 +19,14 @@ void Catalog::citire(const std::string& fis_intrare) {
 
     int n, k;
     fis >> n >> k;
-    if (n < 1 || n > 1500 || k < 1 || k > n) {
-        std::cout << "parametrii nu respecta cerintele";
+    if (n < 1 || n > 1500 || k < 0 || k > n) {
+        std::cout << "Parametrii nu respecta cerintele\n";
+        N = 0;
+        K = 0;
         fis.close();
         return;
     }
+
     N = 0;             
     K = k;        
 
@@ -42,33 +45,33 @@ void Catalog::citire(const std::string& fis_intrare) {
 }
 
 void Catalog::sorteaza() {
-    int i, j;
-    double eroare = 1e-7; 
-    for (i = 0; i < N - 1; i++) 
-    {
-        for (j = i + 1; j < N; j++) 
-        {
-            if (fabs(vector_studenti[i].medie - vector_studenti[j].medie) > eroare) 
-            {
-                if (vector_studenti[i].medie < vector_studenti[j].medie) 
-                {
-                    Student aux = vector_studenti[i];
-                    vector_studenti[i] = vector_studenti[j];
-                    vector_studenti[j] = aux;
-                }
+    for (int i = 0; i < N - 1; i++) {
+        for (int j = i + 1; j < N; j++) {
+            // rotunjim la 2 zecimale ca la afișare
+            int mi = (int)floor(vector_studenti[i].medie * 100.0 + 0.5);
+            int mj = (int)floor(vector_studenti[j].medie * 100.0 + 0.5);
+
+            bool trebuie_swap = false;
+
+            // 1) medie rotunjită descrescător
+            if (mi != mj) {
+                if (mi < mj) trebuie_swap = true;
             }
-            else if (vector_studenti[i].nume > vector_studenti[j].nume)
-                {
-                    Student aux = vector_studenti[i];
-                    vector_studenti[i] = vector_studenti[j];
-                    vector_studenti[j] = aux;
-                }
-            else if (vector_studenti[i].nume == vector_studenti[j].nume && vector_studenti[i].varsta > vector_studenti[j].varsta) 
-                {
-                    Student aux = vector_studenti[i];
-                    vector_studenti[i] = vector_studenti[j];
-                    vector_studenti[j] = aux;
-                }
+            // 2) la egalitate, după nume (A -> Z)
+            else if (vector_studenti[i].nume > vector_studenti[j].nume) {
+                trebuie_swap = true;
+            }
+            // 3) la egalitate și de nume, după vârstă (crescător)
+            else if (vector_studenti[i].nume == vector_studenti[j].nume &&
+                     vector_studenti[i].varsta > vector_studenti[j].varsta) {
+                trebuie_swap = true;
+            }
+
+            if (trebuie_swap) {
+                Student aux = vector_studenti[i];
+                vector_studenti[i] = vector_studenti[j];
+                vector_studenti[j] = aux;
+            }
         }
     }
 }
@@ -77,6 +80,14 @@ void Catalog::scriere(const std::string& fis_iesire) const {
     std::ofstream out(fis_iesire.c_str());
     if (!out.is_open()) {
         std::cout << "Eroare la deschiderea fisierului de iesire\n";
+        return;
+    }
+
+    if (K == 0 || N == 0) {
+        out << "+----------------------+--------+-------+\n";
+        out << "| Nume                 | Varsta | Medie |\n";
+        out << "+----------------------+--------+-------+\n";
+        out.close();
         return;
     }
 
@@ -99,47 +110,65 @@ void Catalog::scriere(const std::string& fis_iesire) const {
 
     out << "+----------------------+--------+-------+\n";
 
-    int lim = (K < N ? K : N);
-    for (int i = 0; i < lim; i++) {
+    int limita; //in cazul in care as vrea sa afisez mai multi studenti decat sunt in catalog
+    if (K < N)
+        limita = K;
+    else
+        limita = N;
+    for (int i = 0; i < limita; i++) {
         const Student& s = vector_studenti[i];
 
         // coloana NUME
         out << "| ";
         std::string nume = s.nume;
-        if ((int)nume.size() > latime_nume) nume = nume.substr(0, latime_nume);
         out << nume;
-        for (int sp = (int)nume.size(); sp < latime_nume; sp++) out << ' ';
+        for (int spatii = (int)nume.size(); spatii < latime_nume; spatii++) //pun spatii pana la latimea fixa
+            out << ' ';
         out << " | ";
 
         // coloana VARSTA
         out << s.varsta;
         int v = s.varsta, cifre = 0;
-        if (v == 0) cifre = 1;
-        else while (v > 0) { v /= 10; cifre++; }
-        for (int sp = cifre; sp < latime_varsta; sp++) out << ' ';
+        if (v == 0) 
+            cifre = 1;
+        while (v > 0) { 
+            v = v / 10; 
+            cifre++; 
+        }
+        for (int spatii = cifre; spatii < latime_varsta; spatii++) 
+            out << ' ';
         out << " | ";
 
         // coloana MEDIE (exact 2 zecimale, padding fix)
-        double m = s.medie;
-        long long c = (long long)floor(m * 100.0 + 0.5);
-        int parte_int = (int)(c / 100);
-        int parte_dec = (int)(c % 100);
+        // coloana MEDIE (exact 2 zecimale, aliniata la stanga)
+        double med = s.medie;
 
-        char medie_str[8];
-        if (parte_int < 10)
-            sprintf(medie_str, " %.2f", m); // spatiu initial pt aliniere
-        else
-            sprintf(medie_str, "%.2f", m);
+        // rotunjim corect la 2 zecimale
+        int a = (int)floor(med * 100.0 + 0.5);
+        int parte_intreaga = a / 100;
+        int parte_fractionara = a % 100;
 
-        // luam doar primele 5 caractere din rezultat (ex: " 9.50" / "10.00")
-        for (int j = 0; j < 5 && medie_str[j] != '\0'; j++)
-            out << medie_str[j];
+        // afisam manual cu 2 zecimale (ex: 9.50, 10.00)
+        char media[8];
+        sprintf(media, "%d.%02d", parte_intreaga, parte_fractionara);
 
+        // afisam caracterele din string
+        out << media;
+
+        // numaram cate caractere am scris (4 sau 5)
+        int len = 0;
+        while (media[len] != '\0') 
+            len++;
+
+        // completam cu spatii pana la latimea coloanei (ex: 5)
+        for (int spatii = len; spatii < latime_medie; spatii++)
+            out << ' ';
+
+        // incheiem coloana
         out << " |\n";
-    }
 
+    }
     // linia de jos
     out << "+----------------------+--------+-------+\n";
-
     out.close();
 }
